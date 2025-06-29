@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import mermaid from 'mermaid';
 
 interface DiagramEditorProps {
@@ -25,6 +25,8 @@ export default function DiagramEditor({
   const [loading, setLoading] = useState(!!diagramId);
   const [error, setError] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Update content when value prop changes (controlled component)
   useEffect(() => {
@@ -80,6 +82,41 @@ export default function DiagramEditor({
     }
   };
 
+  // Fullscreen handler
+  const handleFullscreen = useCallback(() => {
+    if (!previewRef.current) return;
+    if (!document.fullscreenElement) {
+      previewRef.current.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  }, []);
+
+  // Exit fullscreen on ESC
+  useEffect(() => {
+    const handler = () => setIsFullscreen(false);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
+
+  // Center and scale SVG in fullscreen
+  useEffect(() => {
+    if (isFullscreen && previewRef.current) {
+      const svg = previewRef.current.querySelector('svg');
+      if (svg) {
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svg.style.maxWidth = '100%';
+        svg.style.maxHeight = '100%';
+        svg.style.display = 'block';
+        svg.style.margin = 'auto';
+      }
+    }
+  }, [isFullscreen, content]);
+
   if (loading) return <div className="border rounded p-2 bg-white dark:bg-gray-800">Loading...</div>;
   if (error) return <div className="border rounded p-2 bg-white dark:bg-gray-800 text-red-600">Error: {error}</div>;
 
@@ -109,7 +146,26 @@ export default function DiagramEditor({
   if (onlyPreview) {
     return (
       <div className="flex flex-col h-full">
-        <div ref={previewRef} className="border rounded p-2 bg-white dark:bg-gray-800 min-h-[200px] flex-1 overflow-auto" />
+        <div className="flex gap-2 mb-2">
+          <button type="button" className="px-2 py-1 rounded bg-green-100 hover:bg-green-200 text-green-900 text-xs font-medium" onClick={() => setScale((s) => Math.min(s + 0.25, 3))}>＋</button>
+          <button type="button" className="px-2 py-1 rounded bg-green-100 hover:bg-green-200 text-green-900 text-xs font-medium" onClick={() => setScale((s) => Math.max(s - 0.25, 0.5))}>－</button>
+          <button type="button" className="px-2 py-1 rounded bg-green-50 hover:bg-green-100 text-green-900 text-xs font-medium" onClick={() => setScale(1)}>100%</button>
+          <button type="button" className="px-2 py-1 rounded bg-green-200 hover:bg-green-300 text-green-900 text-xs font-medium" onClick={handleFullscreen}>⛶</button>
+        </div>
+        <div
+          ref={previewRef}
+          className={
+            isFullscreen
+              ? 'flex items-center justify-center w-full h-full bg-white dark:bg-gray-800 overflow-auto'
+              : 'border rounded p-2 bg-white dark:bg-gray-800 min-h-[200px] flex-1 overflow-auto'
+          }
+          style={
+            isFullscreen
+              ? { width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+              : { transform: `scale(${scale})`, transformOrigin: 'top left', transition: 'transform 0.2s' }
+          }
+          onDoubleClick={handleFullscreen}
+        />
         <button
           type="button"
           className="mt-2 px-4 py-1 bg-green-400 hover:bg-green-500 text-white rounded shadow text-sm self-start"
@@ -155,7 +211,26 @@ export default function DiagramEditor({
       </div>
       <div className="flex-1 flex flex-col">
         <label className="font-medium mb-1">Preview</label>
-        <div ref={previewRef} className="border rounded p-2 bg-white dark:bg-gray-800 min-h-[200px] flex-1 overflow-auto" />
+        <div className="flex gap-2 mb-2">
+          <button type="button" className="px-2 py-1 rounded bg-green-100 hover:bg-green-200 text-green-900 text-xs font-medium" onClick={() => setScale((s) => Math.min(s + 0.25, 3))}>＋</button>
+          <button type="button" className="px-2 py-1 rounded bg-green-100 hover:bg-green-200 text-green-900 text-xs font-medium" onClick={() => setScale((s) => Math.max(s - 0.25, 0.5))}>－</button>
+          <button type="button" className="px-2 py-1 rounded bg-green-50 hover:bg-green-100 text-green-900 text-xs font-medium" onClick={() => setScale(1)}>100%</button>
+          <button type="button" className="px-2 py-1 rounded bg-green-200 hover:bg-green-300 text-green-900 text-xs font-medium" onClick={handleFullscreen}>⛶</button>
+        </div>
+        <div
+          ref={previewRef}
+          className={
+            isFullscreen
+              ? 'flex items-center justify-center w-full h-full bg-white dark:bg-gray-800 overflow-auto'
+              : 'border rounded p-2 bg-white dark:bg-gray-800 min-h-[200px] flex-1 overflow-auto'
+          }
+          style={
+            isFullscreen
+              ? { width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+              : { transform: `scale(${scale})`, transformOrigin: 'top left', transition: 'transform 0.2s' }
+          }
+          onDoubleClick={handleFullscreen}
+        />
         <button
           type="button"
           className="mt-2 px-4 py-1 bg-green-400 hover:bg-green-500 text-white rounded shadow text-sm self-start"
