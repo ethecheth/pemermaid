@@ -40,7 +40,7 @@ export default function DiagramEditor({
     if (!diagramId) return;
     setLoading(true);
     setError(null);
-    fetch(`/api/diagrams/${diagramId}`)
+    fetch(`./api/diagrams/${diagramId}`)
       .then(async (res) => {
         if (!res.ok) throw new Error('Failed to fetch diagram');
         const data = await res.json();
